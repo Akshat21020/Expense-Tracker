@@ -1,14 +1,18 @@
 import Expense from "../models/Expense.js";
+import { categorizeExpense } from "../aiServices.js"
 
 // CREATE expense
 export const createExpense = async (req, res) => {
   try {
-    const { amount, category, description, date } = req.body;
+    const { amount, description, category, date } = req.body;
+
+    const finalCategory =
+      category || categorizeExpense(description);
 
     const expense = await Expense.create({
       user: req.user._id,
       amount,
-      category,
+      category: finalCategory,
       description,
       date,
     });
@@ -20,7 +24,7 @@ export const createExpense = async (req, res) => {
   }
 };
 
-// GET all expenses (for logged-in user)
+// GET expenses
 export const getExpenses = async (req, res) => {
   try {
     const expenses = await Expense.find({ user: req.user._id }).sort({
