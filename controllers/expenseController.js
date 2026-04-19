@@ -1,13 +1,16 @@
 import Expense from "../models/Expense.js";
-import { categorizeExpense } from "../aiServices.js"
+import { categorizeExpenseAI } from "../services/aiServices.js"
 
 // CREATE expense
 export const createExpense = async (req, res) => {
   try {
     const { amount, description, category, date } = req.body;
 
-    const finalCategory =
-      category || categorizeExpense(description);
+    let finalCategory = category;
+
+    if (!category && description) {
+      finalCategory = await categorizeExpenseAI(description);
+    }
 
     const expense = await Expense.create({
       user: req.user._id,
