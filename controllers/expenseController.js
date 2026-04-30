@@ -1,5 +1,13 @@
 import Expense from "../models/Expense.js";
-import { categorizeExpenseAI } from "../services/aiServices.js"
+import { categorizeExpenseAI } from "../services/aiServices.js";
+import { deleteCache } from "../utils/cache.js";
+
+
+export const invalidateInsightsCache = (userId) => {
+  const now = new Date();
+  const key = `insights:${userId}:${now.getFullYear()}-${now.getMonth()}`;
+  deleteCache(key);
+};
 
 // CREATE expense
 export const createExpense = async (req, res) => {
@@ -20,6 +28,8 @@ export const createExpense = async (req, res) => {
       date,
     });
 
+    invalidateInsightsCache(req.user._id);
+
     res.status(201).json(expense);
   } catch (error) {
     console.error(error);
@@ -30,9 +40,18 @@ export const createExpense = async (req, res) => {
 // GET expenses
 export const getExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.find({ user: req.user._id }).sort({
-      date: -1,
-    });
+    const { page = 1, limit = 10, category } = req.query;
+
+    const query = { user: req.user._id };
+
+    if (category) {
+      query.category = category;
+    }
+
+    const expenses = await Expense.find(query)
+      .sort({ date: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
 
     res.json(expenses);
   } catch (error) {
@@ -60,6 +79,8 @@ export const updateExpense = async (req, res) => {
       { new: true }
     );
 
+    invalidateInsightsCache(req.user._id);
+
     res.json(updated);
   } catch (error) {
     console.error(error);
@@ -82,9 +103,12 @@ export const deleteExpense = async (req, res) => {
 
     await expense.deleteOne();
 
+    invalidateInsightsCache(req.user._id);
+
     res.json({ message: "Expense removed" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
+

@@ -5,6 +5,8 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
+import morgan from "morgan";
 
 dotenv.config();
 connectDB();
@@ -14,6 +16,8 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(errorHandler);
+app.use(morgan("dev"));
 
 // Routes
 app.use("/api/auth", authRoutes);

@@ -1,5 +1,6 @@
 import Expense from "../models/Expense.js";
 import openai from "../config/ai.js";
+import { getCache, setCache } from "../utils/cache.js";
 
 // Helper: group by category
 const groupByCategory = (expenses) => {
@@ -77,8 +78,14 @@ export const generateInsights = async (userId) => {
   };
 };
 
+
 export const generateAIInsights = async (data) => {
   try {
+    const key = `ai:${JSON.stringify(data)}`;
+
+    const cached = getCache(key);
+    if (cached) return cached;
+
     const prompt = `
 You are a financial assistant.
 
@@ -89,23 +96,24 @@ Data:
 - Last month total: ${data.lastMonthTotal}
 - Change: ${data.percentageChange}%
 - Top category: ${data.topCategory}
-
-Keep it concise and user-friendly.
 `;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 100,
-      temperature: 0.5,
     });
 
-    return response.choices[0].message.content;
+    const text = response.choices[0].message.content;
+
+    setCache(key, text, 60 * 60 * 1000);
+
+    return text;
   } catch (error) {
-    console.error("AI Insight Error:", error.message);
+    console.error("AI error:", error.message);
 
     return `You spent ${data.percentageChange}% ${
       data.percentageChange > 0 ? "more" : "less"
-    } than last month. Your top category is ${data.topCategory}.`;
+    } than last month.`;
   }
 };
